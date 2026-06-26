@@ -1,4 +1,4 @@
-# Starshell 🌌
+# Starshell 
 
 A 2D astronomical physics simulator built entirely in Python Turtle — no external libraries.
 
