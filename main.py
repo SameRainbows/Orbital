@@ -3,6 +3,7 @@ import math
 
 t = turtle.Turtle()
 plt = turtle.Turtle()
+k = turtle.Turtle()
 t.screen.setup(700,700)
 
 screen = t.screen
@@ -24,6 +25,14 @@ objs.append([plt, 1, 26, -5])
 plt.goto(100,100)
 
 plt.pd()
+
+k.shape("circle")
+k.color("yellow")
+k.shapesize(1,1)
+k.speed(0) # 1:slowest, 3:slow, 5:normal, 10:fast, 0:fastest
+k.pu()
+objs.append([k, 1, 26, -5])
+k.goto(-100,140)
 
 G = 1000
 def distance(t1, t2): # t1.distance(t2)
