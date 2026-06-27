@@ -13,18 +13,18 @@ t.shapesize(2,2)
 t.speed(0) # 1:slowest, 3:slow, 5:normal, 10:fast, 0:fastest
 t.pu()
 
-objs.append([t, 4])
+objs.append([t, 100, 0, 0])
 
 plt.shape("circle")
 plt.color("blue")
 plt.shapesize(1,1)
 plt.speed(0) # 1:slowest, 3:slow, 5:normal, 10:fast, 0:fastest
 plt.pu()
-objs.append([plt, 2])
+objs.append([plt, 1, 26, -5])
 plt.goto(100,100)
 
-vx = 4
-vy = -4
+plt.pd()
+
 G = 1000
 def distance(t1, t2): # t1.distance(t2)
     
@@ -40,7 +40,7 @@ def direction(obj1,obj2): # θ = atan2(y₂−y₁, x₂−x₁)
     angle = math.atan2(t2.ycor() - t1.ycor(), t2.xcor() - t1.xcor())
     return angle
 
-def velo_update(force, angle, mass):    # Fx = F × cos(θ),  Fy = F × sin(θ)
+def velo_update(obj, force, angle, mass):    # Fx = F × cos(θ),  Fy = F × sin(θ)
     global vx
     global vy
     
@@ -48,24 +48,44 @@ def velo_update(force, angle, mass):    # Fx = F × cos(θ),  Fy = F × sin(θ)
     Fy = force * math.sin(angle)
     ax = Fx / mass
     ay = Fy / mass
-    vx += ax
-    vy += ay
+    obj[2] += ax
+    obj[3] += ay
     return 
 
 def move():
-    global vx
-    global vy
-    obj1 = objs[0]
+    global objs
+    for body in objs:
+        for other in objs:
+            if other == body:
+                continue
+            else:
+                F = force(body, other)
+                D = direction(body, other)
+                velo_update(body, F, D, body[1])
+        vx = body[2]
+        vy = body[3]
+
+        x = body[0].xcor()
+        y = body[0].ycor()
+
+        body[0].goto(x + vx, y + vy)
+
+    screen.ontimer(move, t=1)
+    """obj1 = objs[0]
     obj2 = objs[1]
+
+    vx = obj2[2]
+    vy = obj2[3]
+
     F = force(obj1, obj2)
     D = direction(obj2, obj1)
-    velo_update(F, D, obj2[1])
+    velo_update(objs[1], F, D, obj2[1])
 
-    x = plt.xcor()
-    y = plt.ycor()
+    x = obj2[0].xcor()
+    y = obj2[0].ycor()
     
-    plt.goto(x + vx, y + vy)
-    screen.ontimer(move, t=1)
+    obj2[0].goto(x + vx, y + vy)
+    screen.ontimer(move, t=1)"""
 
 
 
