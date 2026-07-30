@@ -3,6 +3,7 @@ import math
 import tkinter
 import random
 import time
+import ctypes
 
 
 __ = turtle.Turtle()
@@ -24,8 +25,15 @@ screen.update()
 print("Press, drag and release to shoot Orbitals. \n Use WASD to move, \n Your mouse wheel to zoom in and out. \n Press G to increase gravity \n Press R to reset \n Use arrow up to increase spawn mass of Orbitals and arrow down to decrease.")
 screen.tracer(0)
 screen.setup(700,700)
+screen.title('Orbital')
+
+root = screen.getcanvas().winfo_toplevel()
+root.update()
+HWND = ctypes.windll.user32.GetForegroundWindow()
+ctypes.windll.dwmapi.DwmSetWindowAttribute(HWND, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int))
+
 screen.bgcolor('black')
-colors = ['orange', 'yellow', 'blue', 'light blue', 'white']
+colors = ['orange', '#FFE44D', 'blue', 'light blue', 'white']
 objs = []
 G = 30
 
@@ -70,7 +78,7 @@ class Particle:
         self.turt.shapesize(self.radius / 10, self.radius / 10)
         self.turt.goto(x, y)
  
-Particle(3000, 0, 0, 0, 0, 0, 0, 30, None)
+Particle(3000, 0, 0, 0, 0, 0, 0, 30, '#FFE44D')
 
 
 
