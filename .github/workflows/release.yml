@@ -90,7 +90,6 @@ jobs:
         with:
           files: dist/${{ matrix.artifact }}
           fail_on_unmatched_files: true
-          append_body: true
           body: |
             ## Downloads
 
