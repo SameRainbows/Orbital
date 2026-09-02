@@ -4,6 +4,7 @@ import tkinter
 import random
 import time
 import ctypes
+import sys
 
 
 __ = turtle.Turtle()
@@ -29,8 +30,13 @@ screen.title('Orbital')
 
 root = screen.getcanvas().winfo_toplevel()
 root.update()
-HWND = ctypes.windll.user32.GetForegroundWindow()
-ctypes.windll.dwmapi.DwmSetWindowAttribute(HWND, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int))
+# Dark title bar is a Windows-only API; skip it on macOS/Linux.
+if sys.platform == "win32":
+    try:
+        HWND = ctypes.windll.user32.GetForegroundWindow()
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(HWND, 20, ctypes.byref(ctypes.c_int(1)), ctypes.sizeof(ctypes.c_int))
+    except Exception:
+        pass
 
 screen.bgcolor('black')
 colors = ['orange', '#FFE44D', 'blue', 'light blue', 'white']

@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*' # Triggers on tags starting with v, e.g. v1.0.0
+  workflow_dispatch: # Manual test build (no release is published)
 
 permissions:
   contents: write
@@ -13,8 +14,17 @@ jobs:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            artifact: Orbital-Windows.exe
+          - os: ubuntu-latest
+            artifact: Orbital-Linux
+          - os: macos-latest        # Apple Silicon (arm64)
+            artifact: Orbital-macOS-AppleSilicon.zip
+          - os: macos-15-intel      # Intel (x86_64)
+            artifact: Orbital-macOS-Intel.zip
 
     steps:
       - name: Checkout repository
@@ -26,43 +36,77 @@ jobs:
           python-version: '3.11'
 
       - name: Install Tkinter dependency (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-tk
+
+      - name: Verify Tkinter is available
+        run: python -c "import tkinter, turtle; print('Tk', tkinter.TkVersion)"
 
       - name: Install PyInstaller
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller
 
-      - name: Build Executable
+      - name: Build Executable (Windows / Linux)
+        if: runner.os != 'macOS'
         run: |
           pyinstaller --onefile --noconsole --name Orbital orbital.py
 
-      - name: Rename binaries for distinct platforms (Windows)
-        if: matrix.os == 'windows-latest'
+      # macOS needs a real .app bundle (onedir + windowed). A bare onefile
+      # binary loses its executable bit when downloaded and is blocked by
+      # Gatekeeper, so it "does nothing" when double-clicked.
+      - name: Build App Bundle (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller --onedir --windowed --name Orbital orbital.py
+          codesign --force --deep --sign - dist/Orbital.app
+          codesign --verify --deep --strict dist/Orbital.app
+          # ditto preserves permissions and bundle structure, unlike plain zip
+          ditto -c -k --keepParent dist/Orbital.app "dist/${{ matrix.artifact }}"
+
+      - name: Rename binary (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Rename-Item -Path "dist/Orbital.exe" -NewName "Orbital-Windows.exe"
+          Rename-Item -Path "dist/Orbital.exe" -NewName "${{ matrix.artifact }}"
 
-      - name: Rename binaries for distinct platforms (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Rename binary (Linux)
+        if: runner.os == 'Linux'
         run: |
-          mv dist/Orbital dist/Orbital-macOS
+          mv dist/Orbital "dist/${{ matrix.artifact }}"
 
-      - name: Rename binaries for distinct platforms (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          mv dist/Orbital dist/Orbital-Linux
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}
+          if-no-files-found: error
 
       - name: Upload Release Binaries
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/Orbital-Windows.exe
-            dist/Orbital-macOS
-            dist/Orbital-Linux
-          fail_on_unsupported_ghost_images: false
+          files: dist/${{ matrix.artifact }}
+          fail_on_unmatched_files: true
+          append_body: true
+          body: |
+            ## Downloads
+
+            | Platform | File |
+            |---|---|
+            | Windows | `Orbital-Windows.exe` |
+            | macOS (Apple Silicon, M1 or newer) | `Orbital-macOS-AppleSilicon.zip` |
+            | macOS (Intel) | `Orbital-macOS-Intel.zip` |
+            | Linux | `Orbital-Linux` (run `chmod +x Orbital-Linux` first) |
+
+            ### macOS: "Apple could not verify" / "cannot be opened"
+
+            The app is not notarized with Apple, so macOS blocks it the first time. Unzip, then either:
+
+            - **macOS 15 or newer:** double-click `Orbital.app`, close the warning, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+            - **macOS 14 or older:** right-click `Orbital.app` and choose **Open**, then click **Open** again.
+            - **Or from Terminal:** `xattr -cr ~/Downloads/Orbital.app` and then open it normally.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
